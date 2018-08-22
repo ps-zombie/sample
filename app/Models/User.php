@@ -55,6 +55,46 @@ class User extends Authenticatable
 	//获取多条微博并排序
 	public function feed()
 	{
-		return $this->statuses()->orderBy('created_at','desc');
+		$user_ids = Auth::user()->followings->pluck('id')->toArray();
+		array_push($user_ids, Auth::user()->id);
+		return Status::whereIn('user_id', $user_ids)
+			->with('user')
+			->orderBy('created_at', 'desc');
+	}
+	//用户与粉丝是多对多的关系
+	public function followers()
+	{
+		return $this->belongsToMany(User::Class,'followers','user_id','follower_id');
+	}
+	public function followings()
+	{
+		return $this->belongsToMany(User::Class,'followers','follower_id','user_id');
+	}
+	//关注
+	public function follow($user_ids)
+	{
+		if(!is_array($user_ids)){
+			$user_ids=compact('user_ids');
+		}
+		return $this->followings()->sync($user_ids,false);
+	}
+	//取消关注
+	public function unfollow($user_ids)
+	{
+		if(!is_array($user_ids))
+		{
+			$user_ids = compact('user_ids');
+		}
+		return $this->followings()->detach($user_ids);
+	}
+	//是否关注判断
+	public function isFollowing($user_ids)
+	{
+//		if(!is_array($user_ids))
+//		{
+//			$user_ids = compact('user_ids');
+//		}
+//		var_dump($user_ids);exit;
+		return $this->followings->contains($user_ids);
 	}
 }
